@@ -153,7 +153,7 @@ class PolicyGradient:
           self.env.play()
         return episode
 
-    def train(self, num_outer_loop, num_episodes, gamma, lr):
+    def train(self, num_outer_loop, num_episodes, gamma, lr, plot_steps):
         """Train the policy network using the REINFORCE algorithm
 
         Args:
@@ -169,10 +169,9 @@ class PolicyGradient:
         for epoch in tqdm(range(num_outer_loop)):
             episodes = []
             for ep in range(num_episodes):
-                print("Episode: ", ep)
                 episodes.append(self.run_episode())
             self.update_policy(episodes, optimizer, gamma)
-            if epoch % 5 == 0:
+            if epoch % plot_steps == 0:
                 rewards.append(self.evaluate(num_episodes))
         return rewards
 
