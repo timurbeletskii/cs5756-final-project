@@ -5,8 +5,9 @@ class Stablebaseline_Base():
     def __init__(self, rl_model):
         self.rl_model = rl_model
     
-    def load_model(self, file_path: str):
-        self.rl_model.load(file_path)
+    def load_model(self, file_path: str, algo: str):
+        if algo == "PPO":
+            self.rl_model = PPO.load(file_path)
 
     def save_model(self, file_path: str):
         self.rl_model.save(file_path)

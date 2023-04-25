@@ -9,7 +9,9 @@ def reward_computing_helper_custom(
     number_of_pokemons: int = 6,
     starting_value: float = 0.0,
     status_value: float = 0.15,
-    victory_value: float = 1.0
+    victory_value: float = 1.0,
+    opponent_value: float = 1.0,
+    active_weight: float = 0.0,
 ) -> float: 
     # 1st compute
     if battle not in self._reward_buffer:
@@ -24,17 +26,33 @@ def reward_computing_helper_custom(
         elif mon.status is not None:
             current_value -= status_value
 
+    if battle.active_pokemon is not None:
+        active = battle.active_pokemon
+        current_value += active.current_hp_fraction * hp_value * active_weight
+        if active.fainted:
+            current_value -= fainted_value * active_weight
+        elif active.status is not None:
+            current_value -= status_value * active_weight
+
     current_value += (number_of_pokemons- len(battle.team)) * hp_value
 
     # Verify if opponent pokemon have fainted or have status
     for mon in battle.opponent_team.values():
-        current_value -= mon.current_hp_fraction * hp_value
+        current_value -= mon.current_hp_fraction * hp_value * opponent_value
         if mon.fainted:
-            current_value += fainted_value
+            current_value += fainted_value * opponent_value
         elif mon.status is not None:
-            current_value += status_value
+            current_value += status_value * opponent_value
 
-    current_value -= (number_of_pokemons - len(battle.opponent_team)) * hp_value
+    current_value -= (number_of_pokemons - len(battle.opponent_team)) * hp_value * opponent_value
+
+    if battle.opponent_active_pokemon is not None:
+        active = battle.opponent_active_pokemon
+        current_value += active.current_hp_fraction * hp_value * active_weight * opponent_value
+        if active.fainted:
+            current_value -= fainted_value * active_weight * opponent_value
+        elif active.status is not None:
+            current_value -= status_value * active_weight * opponent_value
 
     # Verify if we won or lost
     if battle.won:
