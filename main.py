@@ -17,7 +17,7 @@ from stable_baselines3 import DQN, PPO
 
 from models.REINFORCE import PolicyGradient, PolicyNet
 from models.stablebaseline_models import Stablebaseline_Base
-from reward_def import reward_computing_helper_poke_rl
+from reward_def import reward_computing_helper_custom, reward_computing_helper_poke_rl
 import argparse
 import teams
 from utils import plot_training
@@ -143,7 +143,7 @@ def train_reinforce(num_outer_loop: int, num_episodes: int,
 
 def train_ppo(num_outer_loop: int, num_episodes: int, 
                  gamma: float, lr: float, plot_steps: int, 
-                 reward_def: str, num_eval_episodes: int):
+                 reward_def: str, num_eval_episodes: int, model_path: str):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
@@ -161,10 +161,12 @@ def train_ppo(num_outer_loop: int, num_episodes: int,
         rl_agent_env.reward_computing_helper = MethodType(reward_computing_helper_poke_rl, rl_agent_env)
     # check_env(rl_agent_env)
 
-    ppo = PPO("MlpPolicy", rl_agent_env, n_steps=num_episodes, gamma=gamma, learning_rate=lr, verbose=1)
+    ppo = PPO("MlpPolicy", rl_agent_env, n_steps=num_episodes, gamma=gamma, learning_rate=lr, verbose=1, 
+                tensorboard_log="tensorboard_logs/ppo/")
     model = Stablebaseline_Base(ppo)
     model.train(total_timesteps=num_outer_loop)
     rl_agent_env.close()
+    model.save_model(model_path)
 
     # Evaluating the model
     opponent = RandomPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
@@ -198,7 +200,7 @@ def train_ppo(num_outer_loop: int, num_episodes: int,
 
 def train_dqn(num_outer_loop: int, num_episodes: int, 
                  gamma: float, lr: float, plot_steps: int, 
-                 reward_def: str, num_eval_episodes: int):
+                 reward_def: str, num_eval_episodes: int, model_path: str):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
@@ -216,10 +218,12 @@ def train_dqn(num_outer_loop: int, num_episodes: int,
         rl_agent_env.reward_computing_helper = MethodType(reward_computing_helper_poke_rl, rl_agent_env)
     # check_env(rl_agent_env)
 
-    dqn = DQN("MlpPolicy", rl_agent_env, gamma=gamma, learning_rate=lr, verbose=1)
+    dqn = DQN("MlpPolicy", rl_agent_env, gamma=gamma, learning_rate=lr, verbose=1, 
+              tensorboard_log="tensorboard_logs/dqn/")
     model = Stablebaseline_Base(dqn)
     model.train(total_timesteps=num_outer_loop)
     rl_agent_env.close()
+    model.save_model(model_path)
 
     # Evaluating the model
     opponent = RandomPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
@@ -268,6 +272,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_eval_episodes', type=int, nargs='?',
                         default=10, help="Number of episodes to evaluate on")
     parser.add_argument("--algo", type=str, nargs='?',default="ppo", help="Choose which algorithm to use")
+    parser.add_argument("--model_path", type=str, nargs='?',default="model.zip", help="Path to save model")
     args = parser.parse_args()
     match args.algo:
         case "reinforce":
@@ -277,8 +282,8 @@ if __name__ == "__main__":
         case "ppo":
             train_ppo(args.num_outer_loop, args.num_episodes, 
                  args.gamma, args.lr, args.plot_steps, 
-                 args.reward_def, args.num_eval_episodes)
+                 args.reward_def, args.num_eval_episodes, args.model_path)
         case "dqn":
             train_dqn(args.num_outer_loop, args.num_episodes, 
                     args.gamma, args.lr, args.plot_steps, 
-                    args.reward_def, args.num_eval_episodes)
+                    args.reward_def, args.num_eval_episodes, args.model_path)
