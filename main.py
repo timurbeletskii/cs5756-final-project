@@ -13,10 +13,10 @@ from poke_env.player import (
 )
 from poke_env import LocalhostServerConfiguration
 from poke_env.data import GenData
-from stable_baselines3 import DQN, PPO
+from stable_baselines3 import DQN, PPO, A2C
 
 from models.REINFORCE import PolicyGradient, PolicyNet
-from models.stablebaseline_models import DQN_Stablebaseline, PPO_Stablebaseline
+from models.stablebaseline_models import A2C_Stablebaseline, DQN_Stablebaseline, PPO_Stablebaseline
 from reward_def import reward_computing_helper_custom 
 import argparse
 import teams
@@ -218,9 +218,7 @@ def evaluate_trained_model(model, model_name: str, num_eval_episodes: int):
     eval_env = RL_Agent(
         battle_format="gen8ou", 
         team=teams.OUR_TEAM,
-        # start_challenging=True, 
         opponent=opponent1, 
-        # use_old_gym_api=True,
     )
     print("Results against random player:")
     if model_name == "REINFORCE":
@@ -248,6 +246,43 @@ def evaluate_trained_model(model, model_name: str, num_eval_episodes: int):
         f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles"
     )
     eval_env.reset_env(restart=False)
+
+
+def train_a2c(total_timesteps: int, num_episodes: int, 
+                 gamma: float, lr: float,
+                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict):
+    opponent = MaxDamagePlayer(
+        battle_format="gen8ou",
+        team=teams.OP_TEAM,
+        server_configuration=LocalhostServerConfiguration,
+    )
+    rl_agent_env = RL_Agent(
+        reward_type=reward_type,
+        battle_format="gen8ou",
+        team=teams.OUR_TEAM,
+        server_configuration=LocalhostServerConfiguration,
+        start_challenging=True,
+        opponent=opponent,
+        use_old_gym_api=True,
+        fainted_value=reward_def_dict["fainted_value"],
+        hp_value=reward_def_dict["hp_value"],
+        victory_value=reward_def_dict["victory_value"],
+        active_weight=reward_def_dict["active_weight"],
+        opponent_weight=reward_def_dict["opponent_weight"],
+        hp_shift=reward_def_dict["hp_shift"],
+        status_value=reward_def_dict["status_value"],
+    )
+
+    dqn = A2C("MlpPolicy", rl_agent_env, verbose=1, 
+              tensorboard_log="tensorboard_logs/a2c/")
+    model = A2C_Stablebaseline(dqn)
+    model.train(total_timesteps=total_timesteps)
+    rl_agent_env.close()
+    model.save_model(model_path)
+
+    # Evaluating the model
+    evaluate_trained_model(model, "A2C", num_eval_episodes)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Reward Definition Experiment')
@@ -310,5 +345,9 @@ if __name__ == "__main__":
                     args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict)
             case "dqn":
                 train_dqn(args.total_timesteps, args.num_episodes, 
+                        args.gamma, args.lr, 
+                        args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict=reward_def_dict)
+            case "a2c":
+                train_a2c(args.total_timesteps, args.num_episodes, 
                         args.gamma, args.lr, 
                         args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict=reward_def_dict)

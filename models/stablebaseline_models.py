@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from stable_baselines3 import PPO, DQN
-from stable_baselines3.dqn.policies import MlpPolicy
+from stable_baselines3 import PPO, DQN, A2C
+
 
 class Stablebaseline_Base(ABC):
     def __init__(self, rl_model):
@@ -46,3 +46,7 @@ class PPO_Stablebaseline(Stablebaseline_Base):
 class DQN_Stablebaseline(Stablebaseline_Base):
     def load_model(self, file_path: str):
         self.rl_model = DQN.load(file_path)
+    
+class A2C_Stablebaseline(Stablebaseline_Base):
+    def load_model(self, file_path: str):
+        self.rl_model = A2C.load(file_path)
