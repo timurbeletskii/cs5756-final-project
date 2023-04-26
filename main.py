@@ -1,4 +1,3 @@
-from types import MethodType
 import numpy as np
 
 from gym import Space
@@ -10,23 +9,25 @@ from poke_env.player import (
     ObservationType,
     RandomPlayer,
     Gen8EnvSinglePlayer,
-    SimpleHeuristicsPlayer
+    SimpleHeuristicsPlayer,
 )
 from poke_env import LocalhostServerConfiguration
 from poke_env.data import GenData
 from stable_baselines3 import DQN, PPO
 
 from models.REINFORCE import PolicyGradient, PolicyNet
-from models.stablebaseline_models import Stablebaseline_Base
-from reward_def import reward_computing_helper_custom, reward_computing_helper_poke_rl
+from models.stablebaseline_models import DQN_Stablebaseline, PPO_Stablebaseline
+from reward_def import reward_computing_helper_custom 
 import argparse
 import teams
 from utils import plot_training
 
+
 class RL_Agent(Gen8EnvSinglePlayer):
-    def __init__(self, battle_format, team, *, opponent, reward_type="default", fainted_value=2.0, 
-        hp_value=1.0, victory_value=15.0, status_value=0.15, opponent_weight = 1.0, active_weight = 0.0):
-        super.__init__(battle_format=battle_format, team=team, opponent=opponent)
+    def __init__(self, reward_type="default", fainted_value=2.0, 
+        hp_value=1.0, victory_value=15.0, status_value=0.15, opponent_weight = 1.0, active_weight = 0.0, 
+        *args, **kwargs):
+        super(RL_Agent, self).__init__(*args, **kwargs)
         self.opponent_weight = opponent_weight
         self.reward_type = reward_type
         self.fainted_value=fainted_value
@@ -42,9 +43,9 @@ class RL_Agent(Gen8EnvSinglePlayer):
                 hp_value=self.hp_value, victory_value=self.victory_value, status_value=self.status_value
             )
         elif self.reward_type == "custom":
-            return self.reward_computing_helper_custom(
-                current_battle, fainted_value = self.fainted_value, hp_value=self.hp_value,
-                 victory_value=self.victory_value, status_value=self.status_value,
+            return reward_computing_helper_custom(
+                self, current_battle, fainted_value = self.fainted_value, hp_value=self.hp_value,
+                victory_value=self.victory_value, status_value=self.status_value,
                 opponent_value=self.opponent_weight, active_weight=self.active_weight
             )
 
@@ -105,13 +106,14 @@ class MaxDamagePlayer(RandomPlayer):
     
 def train_reinforce(num_outer_loop: int, num_episodes: int, 
                  gamma: float, lr: float, plot_steps: int, 
-                 reward_def: str, num_eval_episodes: int):
+                 reward_type: str, num_eval_episodes: int, model_path: str,):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
         server_configuration=LocalhostServerConfiguration,
     )
     rl_agent_env = RL_Agent(
+        reward_type=reward_type,
         battle_format="gen8ou",
         team=teams.OUR_TEAM,
         server_configuration=LocalhostServerConfiguration,
@@ -119,8 +121,6 @@ def train_reinforce(num_outer_loop: int, num_episodes: int,
         opponent=opponent,
         # use_old_gym_api=True,
     )
-    if (reward_def == "poke_rl"):
-        rl_agent_env.reward_computing_helper = MethodType(reward_computing_helper_poke_rl, rl_agent_env)
     # check_env(rl_agent_env)
 
     policy_net = PolicyNet(rl_agent_env.observation_space.shape[0], rl_agent_env.action_space.n, 128)
@@ -130,47 +130,22 @@ def train_reinforce(num_outer_loop: int, num_episodes: int,
     avg_reward = policy_gradient.evaluate(num_episodes=num_episodes)
     print(f"Average reward {avg_reward}")
     rl_agent_env.close()
+    policy_gradient.save_model(model_path)
 
     # Evaluating the model
-    opponent = RandomPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_random_opp_env = RL_Agent(
-        battle_format="gen8ou", 
-        team=teams.OUR_TEAM,
-        start_challenging=True, 
-        opponent=opponent, 
-        use_old_gym_api=True,
-    )
-    print("Results against random player:")
-    policy_gradient.env = eval_random_opp_env
-    avg_reward = policy_gradient.evaluate(num_episodes=num_eval_episodes)
-    print(
-        f"DQN Evaluation: {eval_random_opp_env.n_won_battles} victories out of {eval_random_opp_env.n_finished_battles} battles"
-    )
-    eval_random_opp_env.reset_env(restart=False)
-    opponent = MaxDamagePlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_maxdamage_opp_env = RL_Agent(
-        battle_format="gen8ou", 
-        team=teams.OUR_TEAM,
-        start_challenging=True, 
-        opponent=opponent, 
-        use_old_gym_api=True,
-    )
-    print("Results against max damage player:")
-    policy_gradient.env = eval_maxdamage_opp_env
-    avg_reward = policy_gradient.evaluate(num_episodes=num_eval_episodes)
-    print(
-        f"DQN Evaluation: {eval_maxdamage_opp_env.n_won_battles} victories out of {eval_maxdamage_opp_env.n_finished_battles} battles"
-    )
+    evaluate_trained_model(policy_gradient, "REINFORCE", num_eval_episodes)
 
-def train_ppo(num_outer_loop: int, num_episodes: int, 
-                 gamma: float, lr: float, plot_steps: int, 
-                 reward_def: str, num_eval_episodes: int, model_path: str):
+
+def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
+                 gamma: float, lr: float, 
+                 reward_type: str, num_eval_episodes: int, model_path: str):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
         server_configuration=LocalhostServerConfiguration,
     )
     rl_agent_env = RL_Agent(
+        reward_type=reward_type,
         battle_format="gen8ou",
         team=teams.OUR_TEAM,
         server_configuration=LocalhostServerConfiguration,
@@ -178,27 +153,36 @@ def train_ppo(num_outer_loop: int, num_episodes: int,
         opponent=opponent,
         use_old_gym_api=True,
     )
-    if (reward_def == "poke_rl"):
-        rl_agent_env.reward_computing_helper = MethodType(reward_computing_helper_poke_rl, rl_agent_env)
     # check_env(rl_agent_env)
 
-    ppo = PPO("MlpPolicy", rl_agent_env, n_steps=num_episodes, gamma=gamma, learning_rate=lr, verbose=1, 
-                tensorboard_log="tensorboard_logs/ppo/")
-    model = Stablebaseline_Base(ppo)
-    model.train(total_timesteps=num_outer_loop)
+    # n_epochs is the number of epoch when optimizing the surrogate loss (default 10)
+    # n_steps is the number of steps to run for each environment per update (default 2048)
+    # total_timesteps used in learn method is the total number of samples (env steps) to train on
+    # So total_timesteps = n_epochs * n_steps?
+
+    ppo = PPO("MlpPolicy", rl_agent_env, 
+              n_steps=n_steps, n_epochs=n_epochs, batch_size=n_steps,
+              gamma=gamma, learning_rate=lr, verbose=1, 
+              tensorboard_log="tensorboard_logs/ppo/")
+    model = PPO_Stablebaseline(ppo)
+    model.train(total_timesteps=total_timestep)
     rl_agent_env.close()
     model.save_model(model_path)
 
+    # Evaluating the mode
+    evaluate_trained_model(model, "PPO", num_eval_episodes)
 
-def train_dqn(num_outer_loop: int, num_episodes: int, 
-                 gamma: float, lr: float, plot_steps: int, 
-                 reward_def: str, num_eval_episodes: int, model_path: str):
+
+def train_dqn(total_timesteps: int, num_episodes: int, 
+                 gamma: float, lr: float,
+                 reward_type: str, num_eval_episodes: int, model_path: str):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
         server_configuration=LocalhostServerConfiguration,
     )
     rl_agent_env = RL_Agent(
+        reward_type=reward_type,
         battle_format="gen8ou",
         team=teams.OUR_TEAM,
         server_configuration=LocalhostServerConfiguration,
@@ -206,94 +190,55 @@ def train_dqn(num_outer_loop: int, num_episodes: int,
         opponent=opponent,
         use_old_gym_api=True,
     )
-    if (reward_def == "poke_rl"):
-        rl_agent_env.reward_computing_helper = MethodType(reward_computing_helper_poke_rl, rl_agent_env)
     # check_env(rl_agent_env)
 
     dqn = DQN("MlpPolicy", rl_agent_env, gamma=gamma, learning_rate=lr, verbose=1, 
               tensorboard_log="tensorboard_logs/dqn/")
-    model = Stablebaseline_Base(dqn)
-    model.train(total_timesteps=num_outer_loop)
+    model = DQN_Stablebaseline(dqn)
+    model.train(total_timesteps=total_timesteps)
     rl_agent_env.close()
     model.save_model(model_path)
 
     # Evaluating the model
-    opponent = RandomPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_random_opp_env = RL_Agent(
-        battle_format="gen8ou", 
-        team=teams.OUR_TEAM,
-        start_challenging=True, 
-        opponent=opponent, 
-        use_old_gym_api=True,
-    )
-    print("Results against random player:")
-    rwd = model.evaluate(env=eval_random_opp_env,num_episodes=num_eval_episodes)
-    print(
-        f"DQN Evaluation: {eval_random_opp_env.n_won_battles} victories out of {eval_random_opp_env.n_finished_battles} battles"
-    )
-    eval_random_opp_env.reset_env(restart=False)
-    opponent = MaxDamagePlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_maxdamage_opp_env = RL_Agent(
-        battle_format="gen8ou", 
-        team=teams.OUR_TEAM,
-        start_challenging=True, 
-        opponent=opponent, 
-        use_old_gym_api=True,
-    )
-    print("Results against max damage player:")
-    rwd = model.evaluate(env=eval_maxdamage_opp_env,num_episodes=num_eval_episodes)
-    print(
-        f"DQN Evaluation: {eval_maxdamage_opp_env.n_won_battles} victories out of {eval_maxdamage_opp_env.n_finished_battles} battles"
-    )
+    evaluate_trained_model(model, "DQN", num_eval_episodes)
 
 
-def evaluate_trained_model(model, num_eval_episodes: int, model_name: str):
+def evaluate_trained_model(model, model_name: str, num_eval_episodes: int):
     # Evaluating the model against random player
-    opponent = RandomPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_random_opp_env = RL_Agent(
+    opponent1 = RandomPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
+    eval_env = RL_Agent(
         battle_format="gen8ou", 
         team=teams.OUR_TEAM,
         # start_challenging=True, 
-        opponent=opponent, 
+        opponent=opponent1, 
         # use_old_gym_api=True,
     )
     print("Results against random player:")
-    rwd = model.evaluate(env=eval_random_opp_env,num_episodes=num_eval_episodes)
+    if model_name == "REINFORCE":
+        rwd = model.evaluate(num_episodes=num_eval_episodes)
+    else:
+        rwd = model.evaluate(env=eval_env,num_episodes=num_eval_episodes)
     print(
-        f"{model_name} Evaluation: {eval_random_opp_env.n_won_battles} victories out of {eval_random_opp_env.n_finished_battles} battles"
+        f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles"
     )
-    eval_random_opp_env.reset_env(restart=False)
 
     # Evaluating the model against max damage player
-    opponent = MaxDamagePlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_maxdamage_opp_env = RL_Agent(
-        battle_format="gen8ou", 
-        team=teams.OUR_TEAM,
-        start_challenging=True, 
-        opponent=opponent, 
-        use_old_gym_api=True,
-    )
+    opponent2 = MaxDamagePlayer(battle_format="gen8ou", team=teams.OP_TEAM)
+    eval_env.reset_env(restart=True, opponent=opponent2)
     print("Results against max damage player:")
-    rwd = model.evaluate(env=eval_maxdamage_opp_env,num_episodes=num_eval_episodes)
+    rwd = model.evaluate(env=eval_env,num_episodes=num_eval_episodes)
     print(
-        f"{model_name} Evaluation: {eval_maxdamage_opp_env.n_won_battles} victories out of {eval_maxdamage_opp_env.n_finished_battles} battles"
+        f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles"
     )
-    eval_maxdamage_opp_env.reset_env(restart=False)
     
     print("Results against simple heuristic player:")
-    opponent = SimpleHeuristicsPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_simple_heuristic_opp_env = RL_Agent(
-        battle_format="gen8ou", 
-        team=teams.OUR_TEAM,
-        start_challenging=True, 
-        opponent=opponent, 
-        use_old_gym_api=True,
-    )
-    rwd = model.evaluate(env=eval_simple_heuristic_opp_env, num_episodes=num_eval_episodes)
+    opponent3 = SimpleHeuristicsPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
+    eval_env.reset_env(restart=True, opponent=opponent3)
+    rwd = model.evaluate(env=eval_env, num_episodes=num_eval_episodes)
     print(
-        f"{model_name} Evaluation: {eval_simple_heuristic_opp_env.n_won_battles} victories out of {eval_simple_heuristic_opp_env.n_finished_battles} battles"
+        f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles"
     )
-    eval_simple_heuristic_opp_env.reset_env(restart=False)
+    eval_env.reset_env(restart=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Reward Definition Experiment')
@@ -301,13 +246,17 @@ if __name__ == "__main__":
                         default=100, help="Number of outer loops")
     parser.add_argument('--num_episodes', type=int, nargs='?',
                         default=10, help="Number of episodes to rollout at each loop")
+    parser.add_argument('--total_timesteps', type=int, nargs='?',
+                        default=10000, help="Number of timesteps (stablebaseline)")
+    parser.add_argument('--n_steps', type=int, nargs='?',
+                        default=64, help="Number of steps to rollout per update (stablebaseline)")
     parser.add_argument('--gamma', type=float, nargs='?',
                         default=0.99, help="Gamma")
     parser.add_argument('--lr', type=float, nargs='?',
                         default=0.01, help="Learning rate")
     parser.add_argument('--plot_steps', type=int, nargs='?',
                         default=5, help="Number of episodes to rollout at each loop")
-    parser.add_argument('--reward_def', type=str, nargs='?',
+    parser.add_argument('--reward_type', type=str, nargs='?',
                         default="default", help="Choose which reward definition to use")
     parser.add_argument('--num_eval_episodes', type=int, nargs='?',
                         default=10, help="Number of episodes to evaluate on")
@@ -321,22 +270,26 @@ if __name__ == "__main__":
             case "reinforce":
                 pass
             case "ppo":
-                model = Stablebaseline_Base(None).load_model(args.model_path, "PPO")
-                evaluate_trained_model(model, args.num_eval_episodes, "PPO")
+                model = PPO_Stablebaseline(None)
+                model.load_model(args.model_path)
+                evaluate_trained_model(model, "PPO", args.num_eval_episodes)
             case "dqn":
-                pass
+                model = DQN_Stablebaseline(None)
+                model.load_model(args.model_path)
+                evaluate_trained_model(model, "DQN", args.num_eval_episodes)
                 
     else:
         match args.algo:
             case "reinforce":
                 train_reinforce(args.num_outer_loop, args.num_episodes,
                             args.gamma, args.lr, args.plot_steps,
-                            args.reward_def, args.num_eval_episodes)
+                            args.reward_type, args.num_eval_episodes, args.model_path)
             case "ppo":
-                train_ppo(args.num_outer_loop, args.num_episodes, 
-                    args.gamma, args.lr, args.plot_steps, 
-                    args.reward_def, args.num_eval_episodes, args.model_path)
+                epochs = args.total_timesteps // args.n_steps
+                train_ppo(args.total_timesteps, args.n_steps, epochs,
+                    args.gamma, args.lr, 
+                    args.reward_type, args.num_eval_episodes, args.model_path)
             case "dqn":
-                train_dqn(args.num_outer_loop, args.num_episodes, 
-                        args.gamma, args.lr, args.plot_steps, 
-                        args.reward_def, args.num_eval_episodes, args.model_path)
+                train_dqn(args.total_timesteps, args.num_episodes, 
+                        args.gamma, args.lr, 
+                        args.reward_type, args.num_eval_episodes, args.model_path)

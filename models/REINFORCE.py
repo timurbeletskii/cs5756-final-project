@@ -56,6 +56,12 @@ class PolicyGradient:
         self.policy_net = policy_net.to(self.device)
         self.reward_to_go = reward_to_go
         
+    def save_model(self, file_path: str):
+        torch.save(self.policy_net.state_dict(), file_path)
+
+    def load_model(self, file_path: str):
+        self.policy_net.load_state_dict(torch.load(file_path))
+
     def select_action(self, state):
         """Select an action based on the policy network
 

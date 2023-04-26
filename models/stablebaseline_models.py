@@ -1,13 +1,14 @@
+from abc import ABC, abstractmethod
 from stable_baselines3 import PPO, DQN
 from stable_baselines3.dqn.policies import MlpPolicy
 
-class Stablebaseline_Base():
+class Stablebaseline_Base(ABC):
     def __init__(self, rl_model):
         self.rl_model = rl_model
     
-    def load_model(self, file_path: str, algo: str):
-        if algo == "PPO":
-            self.rl_model = PPO.load(file_path)
+    @abstractmethod
+    def load_model(self, file_path: str):
+        pass
 
     def save_model(self, file_path: str):
         self.rl_model.save(file_path)
@@ -37,3 +38,11 @@ class Stablebaseline_Base():
         return total_rewards/num_episodes
     
         
+class PPO_Stablebaseline(Stablebaseline_Base):
+    def load_model(self, file_path: str):
+        self.rl_model = PPO.load(file_path)
+
+
+class DQN_Stablebaseline(Stablebaseline_Base):
+    def load_model(self, file_path: str):
+        self.rl_model = DQN.load(file_path)
