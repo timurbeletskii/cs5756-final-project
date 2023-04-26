@@ -12,6 +12,7 @@ def reward_computing_helper_custom(
     victory_value: float = 1.0,
     opponent_value: float = 1.0,
     active_weight: float = 0.0,
+    hp_shift: float = 0.0
 ) -> float: 
     # 1st compute
     if battle not in self._reward_buffer:
@@ -28,7 +29,9 @@ def reward_computing_helper_custom(
 
     if battle.active_pokemon is not None:
         active = battle.active_pokemon
-        current_value += active.current_hp_fraction * hp_value * active_weight
+        current_value -= active.current_hp_fraction * hp_value # Reset hp contribution of active pokemon to 0
+        current_value += (active.current_hp_fraction - hp_shift) * hp_value * (1 + active_weight)
+        # Add shifted hp reward value for active pokemon
         if active.fainted:
             current_value -= fainted_value * active_weight
         elif active.status is not None:
@@ -48,6 +51,9 @@ def reward_computing_helper_custom(
 
     if battle.opponent_active_pokemon is not None:
         active = battle.opponent_active_pokemon
+        current_value -= active.current_hp_fraction * hp_value * opponent_value # Reset hp contribution of active pokemon to 0
+        current_value += (active.current_hp_fraction - hp_shift) * hp_value * opponent_value * (1 + active_weight)
+        # Add shifted hp reward value for active pokemon
         current_value += active.current_hp_fraction * hp_value * active_weight * opponent_value
         if active.fainted:
             current_value -= fainted_value * active_weight * opponent_value

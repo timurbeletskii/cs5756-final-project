@@ -25,7 +25,7 @@ from utils import plot_training
 
 class RL_Agent(Gen8EnvSinglePlayer):
     def __init__(self, reward_type="default", fainted_value=2.0, 
-        hp_value=1.0, victory_value=15.0, status_value=0.15, opponent_weight = 1.0, active_weight = 0.0, 
+        hp_value=1.0, victory_value=15.0, status_value=0.15, opponent_weight = 1.0, active_weight = 0.0, hp_shift = 0.0,
         *args, **kwargs):
         super(RL_Agent, self).__init__(*args, **kwargs)
         self.opponent_weight = opponent_weight
@@ -35,18 +35,20 @@ class RL_Agent(Gen8EnvSinglePlayer):
         self.victory_value = victory_value
         self.status_value = status_value
         self.active_weight = active_weight
+        self.hp_shift = hp_shift
 
     def calc_reward(self, last_battle, current_battle) -> float:
         if self.reward_type == "default":
             return self.reward_computing_helper(
                 current_battle, fainted_value=self.fainted_value, 
-                hp_value=self.hp_value, victory_value=self.victory_value, status_value=self.status_value
+                hp_value=self.hp_value, victory_value=self.victory_value, status_value=self.status_value 
             )
         elif self.reward_type == "custom":
             return reward_computing_helper_custom(
                 self, current_battle, fainted_value = self.fainted_value, hp_value=self.hp_value,
                 victory_value=self.victory_value, status_value=self.status_value,
-                opponent_value=self.opponent_weight, active_weight=self.active_weight
+                opponent_value=self.opponent_weight, active_weight=self.active_weight,
+                hp_shift=self.hp_shift
             )
 
 
@@ -138,7 +140,7 @@ def train_reinforce(num_outer_loop: int, num_episodes: int,
 
 def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
                  gamma: float, lr: float, 
-                 reward_type: str, num_eval_episodes: int, model_path: str):
+                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
@@ -152,6 +154,13 @@ def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
         start_challenging=True,
         opponent=opponent,
         use_old_gym_api=True,
+        fainted_value=reward_def_dict["fainted_value"],
+        hp_value=reward_def_dict["hp_value"],
+        victory_value=reward_def_dict["victory_value"],
+        active_weight=reward_def_dict["active_weight"],
+        opponent_weight=reward_def_dict["opponent_weight"],
+        hp_shift=reward_def_dict["hp_shift"],
+        status_value=reward_def_dict["status_value"],
     )
     # check_env(rl_agent_env)
 
@@ -175,7 +184,7 @@ def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
 
 def train_dqn(total_timesteps: int, num_episodes: int, 
                  gamma: float, lr: float,
-                 reward_type: str, num_eval_episodes: int, model_path: str):
+                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
@@ -259,10 +268,17 @@ if __name__ == "__main__":
     parser.add_argument('--reward_type', type=str, nargs='?',
                         default="default", help="Choose which reward definition to use")
     parser.add_argument('--num_eval_episodes', type=int, nargs='?',
-                        default=10, help="Number of episodes to evaluate on")
+                        default=100, help="Number of episodes to evaluate on")
     parser.add_argument("--algo", type=str, nargs='?',default="ppo", help="Choose which algorithm to use")
     parser.add_argument("--model_path", type=str, nargs='?',default="model.zip", help="Path to save model")
     parser.add_argument("--evaluate_only", action="store_true", help="Evaluate only")
+    parser.add_argument('--fainted_val', type=float, nargs='?', default=2.0)
+    parser.add_argument('--hp_val', type=float, nargs='?', default=1.0)
+    parser.add_argument('--victory_val', type=float, nargs='?', default=15.0)
+    parser.add_argument('--status_val', type=float, nargs='?', default=0.15)
+    parser.add_argument('--op_wgt', type=float, nargs='?', default=1.0)
+    parser.add_argument('--act_wgt', type=float, nargs='?', default=0.0)
+    parser.add_argument('--hp_shift', type=float, nargs='?', default=0.0)
     args = parser.parse_args()
 
     if args.evaluate_only:
@@ -279,6 +295,9 @@ if __name__ == "__main__":
                 evaluate_trained_model(model, "DQN", args.num_eval_episodes)
                 
     else:
+        reward_def_dict = {"fainted_value": args.fainted_val,
+                "hp_value": args.hp_val, "victory_value": args.victory_val, 'status_value': args.status_val, 
+                'opponent_weight'  : args.op_wgt, 'active_weight'  : args.act_wgt, 'hp_shift'  : args.hp_shift}
         match args.algo:
             case "reinforce":
                 train_reinforce(args.num_outer_loop, args.num_episodes,
@@ -288,8 +307,8 @@ if __name__ == "__main__":
                 epochs = args.total_timesteps // args.n_steps
                 train_ppo(args.total_timesteps, args.n_steps, epochs,
                     args.gamma, args.lr, 
-                    args.reward_type, args.num_eval_episodes, args.model_path)
+                    args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict)
             case "dqn":
                 train_dqn(args.total_timesteps, args.num_episodes, 
                         args.gamma, args.lr, 
-                        args.reward_type, args.num_eval_episodes, args.model_path)
+                        args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict=reward_def_dict)
