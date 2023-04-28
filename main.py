@@ -330,7 +330,10 @@ if __name__ == "__main__":
                 model = DQN_Stablebaseline(None)
                 model.load_model(args.model_path)
                 evaluate_trained_model(model, "DQN", args.num_eval_episodes, args.log_num)
-                
+            case "a2c":
+                model = A2C_Stablebaseline(None)
+                model.load_model(args.model_path)
+                evaluate_trained_model(model, "A2C", args.num_eval_episodes, args.log_num)
     else:
         reward_def_dict = {"fainted_value": args.fainted_val,
                 "hp_value": args.hp_val, "victory_value": args.victory_val, 'status_value': args.status_val, 
