@@ -54,7 +54,6 @@ def reward_computing_helper_custom(
         current_value -= active.current_hp_fraction * hp_value * opponent_value # Reset hp contribution of active pokemon to 0
         current_value += (active.current_hp_fraction - hp_shift) * hp_value * opponent_value * (1 + active_weight)
         # Add shifted hp reward value for active pokemon
-        current_value += active.current_hp_fraction * hp_value * active_weight * opponent_value
         if active.fainted:
             current_value -= fainted_value * active_weight * opponent_value
         elif active.status is not None:

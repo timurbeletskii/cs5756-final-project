@@ -108,7 +108,7 @@ class MaxDamagePlayer(RandomPlayer):
     
 def train_reinforce(num_outer_loop: int, num_episodes: int, 
                  gamma: float, lr: float, plot_steps: int, 
-                 reward_type: str, num_eval_episodes: int, model_path: str,):
+                 reward_type: str, num_eval_episodes: int, model_path: str, log_num: int):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
@@ -135,12 +135,12 @@ def train_reinforce(num_outer_loop: int, num_episodes: int,
     policy_gradient.save_model(model_path)
 
     # Evaluating the model
-    evaluate_trained_model(policy_gradient, "REINFORCE", num_eval_episodes)
+    evaluate_trained_model(policy_gradient, "REINFORCE", num_eval_episodes, log_num)
 
 
 def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
                  gamma: float, lr: float, 
-                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict):
+                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict, log_num: int):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
@@ -179,12 +179,12 @@ def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
     model.save_model(model_path)
 
     # Evaluating the mode
-    evaluate_trained_model(model, "PPO", num_eval_episodes)
+    evaluate_trained_model(model, "PPO", num_eval_episodes, log_num)
 
 
 def train_dqn(total_timesteps: int, num_episodes: int, 
                  gamma: float, lr: float,
-                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict):
+                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict, log_num: int):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
@@ -209,48 +209,49 @@ def train_dqn(total_timesteps: int, num_episodes: int,
     model.save_model(model_path)
 
     # Evaluating the model
-    evaluate_trained_model(model, "DQN", num_eval_episodes)
+    evaluate_trained_model(model, "DQN", num_eval_episodes, log_num)
 
 
-def evaluate_trained_model(model, model_name: str, num_eval_episodes: int):
-    # Evaluating the model against random player
-    opponent1 = RandomPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_env = RL_Agent(
-        battle_format="gen8ou", 
-        team=teams.OUR_TEAM,
-        opponent=opponent1, 
-    )
-    print("Results against random player:")
-    if model_name == "REINFORCE":
-        rwd = model.evaluate(num_episodes=num_eval_episodes)
-    else:
+def evaluate_trained_model(model, model_name: str, num_eval_episodes: int, log_num: int):
+    with open(f'./results/{model_name}_{log_num}.log', 'a') as file:
+        # Evaluating the model against random player
+        opponent1 = RandomPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
+        eval_env = RL_Agent(
+            battle_format="gen8ou", 
+            team=teams.OUR_TEAM,
+            opponent=opponent1, 
+        )    
+        file.write("Results against random player:\n")
+        if model_name == "REINFORCE":
+            rwd = model.evaluate(num_episodes=num_eval_episodes)
+        else:
+            rwd = model.evaluate(env=eval_env,num_episodes=num_eval_episodes)
+        file.write(
+            f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles\n"
+        )
+
+        # Evaluating the model against max damage player
+        opponent2 = MaxDamagePlayer(battle_format="gen8ou", team=teams.OP_TEAM)
+        eval_env.reset_env(restart=True, opponent=opponent2)
+        file.write("Results against max damage player:\n")
         rwd = model.evaluate(env=eval_env,num_episodes=num_eval_episodes)
-    print(
-        f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles"
-    )
-
-    # Evaluating the model against max damage player
-    opponent2 = MaxDamagePlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_env.reset_env(restart=True, opponent=opponent2)
-    print("Results against max damage player:")
-    rwd = model.evaluate(env=eval_env,num_episodes=num_eval_episodes)
-    print(
-        f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles"
-    )
-    
-    print("Results against simple heuristic player:")
-    opponent3 = SimpleHeuristicsPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
-    eval_env.reset_env(restart=True, opponent=opponent3)
-    rwd = model.evaluate(env=eval_env, num_episodes=num_eval_episodes)
-    print(
-        f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles"
-    )
-    eval_env.reset_env(restart=False)
+        file.write(
+            f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles\n"
+        )
+        
+        opponent3 = SimpleHeuristicsPlayer(battle_format="gen8ou", team=teams.OP_TEAM)
+        eval_env.reset_env(restart=True, opponent=opponent3)
+        rwd = model.evaluate(env=eval_env, num_episodes=num_eval_episodes)
+        file.write("Results against simple heuristic player:\n")
+        file.write(
+            f"{model_name} Evaluation: {eval_env.n_won_battles} victories out of {eval_env.n_finished_battles} battles\n"
+        )
+        eval_env.reset_env(restart=False)
 
 
 def train_a2c(total_timesteps: int, num_episodes: int, 
                  gamma: float, lr: float,
-                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict):
+                 reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict, log_num: int):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
@@ -281,7 +282,7 @@ def train_a2c(total_timesteps: int, num_episodes: int,
     model.save_model(model_path)
 
     # Evaluating the model
-    evaluate_trained_model(model, "A2C", num_eval_episodes)
+    evaluate_trained_model(model, "A2C", num_eval_episodes, log_num)
 
 
 if __name__ == "__main__":
@@ -314,6 +315,7 @@ if __name__ == "__main__":
     parser.add_argument('--op_wgt', type=float, nargs='?', default=1.0)
     parser.add_argument('--act_wgt', type=float, nargs='?', default=0.0)
     parser.add_argument('--hp_shift', type=float, nargs='?', default=0.0)
+    parser.add_argument('--log_num', type=int, nargs='?', default=0)
     args = parser.parse_args()
 
     if args.evaluate_only:
@@ -323,11 +325,11 @@ if __name__ == "__main__":
             case "ppo":
                 model = PPO_Stablebaseline(None)
                 model.load_model(args.model_path)
-                evaluate_trained_model(model, "PPO", args.num_eval_episodes)
+                evaluate_trained_model(model, "PPO", args.num_eval_episodes, args.log_num)
             case "dqn":
                 model = DQN_Stablebaseline(None)
                 model.load_model(args.model_path)
-                evaluate_trained_model(model, "DQN", args.num_eval_episodes)
+                evaluate_trained_model(model, "DQN", args.num_eval_episodes, args.log_num)
                 
     else:
         reward_def_dict = {"fainted_value": args.fainted_val,
@@ -337,17 +339,17 @@ if __name__ == "__main__":
             case "reinforce":
                 train_reinforce(args.num_outer_loop, args.num_episodes,
                             args.gamma, args.lr, args.plot_steps,
-                            args.reward_type, args.num_eval_episodes, args.model_path)
+                            args.reward_type, args.num_eval_episodes, args.model_path, args.log_num)
             case "ppo":
                 epochs = args.total_timesteps // args.n_steps
                 train_ppo(args.total_timesteps, args.n_steps, epochs,
                     args.gamma, args.lr, 
-                    args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict)
+                    args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict, args.log_num)
             case "dqn":
                 train_dqn(args.total_timesteps, args.num_episodes, 
                         args.gamma, args.lr, 
-                        args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict=reward_def_dict)
+                        args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict, args.log_num)
             case "a2c":
                 train_a2c(args.total_timesteps, args.num_episodes, 
                         args.gamma, args.lr, 
-                        args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict=reward_def_dict)
+                        args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict, args.log_num)
