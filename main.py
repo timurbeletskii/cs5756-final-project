@@ -252,7 +252,7 @@ def evaluate_trained_model(model, model_name: str, num_eval_episodes: int, log_n
 def train_a2c(total_timesteps: int, num_episodes: int, 
                  gamma: float, lr: float,
                  reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict, log_num: int):
-    opponent = MaxDamagePlayer(
+    opponent = SimpleHeuristicsPlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
         server_configuration=LocalhostServerConfiguration,
