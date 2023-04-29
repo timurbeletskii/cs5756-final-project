@@ -30,7 +30,7 @@ class Stablebaseline_Base(ABC):
             state = env.reset()
             done, step = False, 0
             while not done and step < max_steps:
-                action, _states = self.rl_model.predict(state)
+                action, _states = self.rl_model.predict(state, deterministic=True)
                 next_state, reward, done, _info = env.step(action)
                 total_rewards += reward
                 state = next_state

@@ -4,8 +4,8 @@ Ability: Static
 EVs: 252 Atk / 4 SpD / 252 Spe  
 Adamant Nature  
 - Volt Tackle  
-- Nuzzle  
-- Iron Tail  
+- Brick Break  
+- Iron Tail 
 - Knock Off
 
 Charizard @ Life Orb  
@@ -14,9 +14,9 @@ EVs: 252 SpA / 4 SpD / 252 Spe
 Timid Nature  
 IVs: 0 Atk  
 - Flamethrower  
-- Dragon Pulse  
+- Hurricane  
 - Roost  
-- Sunny Day
+- Thunder Punch
 
 Blastoise @ White Herb  
 Ability: Torrent  
@@ -25,7 +25,7 @@ Mild Nature
 - Scald  
 - Ice Beam  
 - Earthquake  
-- Shell Smash
+- Flash Cannon
 
 Venusaur @ Black Sludge  
 Ability: Chlorophyll  
@@ -35,16 +35,16 @@ IVs: 0 Atk
 - Giga Drain  
 - Sludge Bomb  
 - Sleep Powder  
-- Leech Seed
+- Earth Power
 
 Sirfetch’d @ Aguav Berry  
 Ability: Steadfast  
 EVs: 248 HP / 252 Atk / 8 SpD  
 Adamant Nature  
 - Close Combat  
-- Swords Dance  
+- First Impression  
 - Poison Jab  
-- Knock Off
+- Brutal Swing
 
 Tauros (M) @ Assault Vest  
 Ability: Intimidate  
@@ -57,62 +57,61 @@ Adamant Nature
 """
 
 OP_TEAM = """
-Eevee @ Eviolite  
-Ability: Adaptability  
-EVs: 252 HP / 252 Atk / 4 SpD  
-Jolly Nature  
-- Quick Attack  
-- Flail  
-- Facade  
-- Wish
+Pikachu-Original (M) @ Light Ball  
+Ability: Static  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Volt Tackle  
+- Brick Break  
+- Iron Tail 
+- Knock Off
 
-Vaporeon @ Leftovers  
-Ability: Hydration  
-EVs: 252 HP / 252 Def / 4 SpA  
-Bold Nature  
-IVs: 0 Atk  
-- Scald  
-- Shadow Ball  
-- Toxic  
-- Wish
-
-Sylveon @ Aguav Berry  
-Ability: Pixilate  
-EVs: 252 HP / 252 SpA / 4 SpD  
-Modest Nature  
-IVs: 0 Atk  
-- Hyper Voice  
-- Mystical Fire  
-- Psyshock  
-- Calm Mind
-
-Jolteon @ Assault Vest  
-Ability: Quick Feet  
+Charizard @ Life Orb  
+Ability: Solar Power  
 EVs: 252 SpA / 4 SpD / 252 Spe  
 Timid Nature  
 IVs: 0 Atk  
-- Thunderbolt  
-- Hyper Voice  
-- Volt Switch  
-- Shadow Ball
+- Flamethrower  
+- Hurricane  
+- Roost  
+- Thunder Punch
 
-Leafeon @ Life Orb  
+Blastoise @ White Herb  
+Ability: Torrent  
+EVs: 4 Atk / 252 SpA / 252 Spe  
+Mild Nature  
+- Scald  
+- Ice Beam  
+- Earthquake  
+- Flash Cannon
+
+Venusaur @ Black Sludge  
 Ability: Chlorophyll  
-EVs: 252 Atk / 4 SpD / 252 Spe  
-Jolly Nature  
-- Leaf Blade  
-- Knock Off  
-- X-Scissor  
-- Swords Dance
+EVs: 252 SpA / 4 SpD / 252 Spe  
+Modest Nature  
+IVs: 0 Atk  
+- Giga Drain  
+- Sludge Bomb  
+- Sleep Powder  
+- Earth Power
 
-Umbreon @ Iapapa Berry  
-Ability: Inner Focus  
-EVs: 252 HP / 4 Atk / 252 SpD  
-Careful Nature  
-- Foul Play  
-- Body Slam  
-- Toxic  
-- Wish  
+Sirfetch’d @ Aguav Berry  
+Ability: Steadfast  
+EVs: 248 HP / 252 Atk / 8 SpD  
+Adamant Nature  
+- Close Combat  
+- First Impression  
+- Poison Jab  
+- Brutal Swing
+
+Tauros (M) @ Assault Vest  
+Ability: Intimidate  
+EVs: 252 Atk / 4 SpD / 252 Spe  
+Adamant Nature  
+- Double-Edge  
+- Earthquake  
+- Megahorn  
+- Iron Head  
 """
 
 NAME_TO_ID_DICT = {
@@ -122,10 +121,4 @@ NAME_TO_ID_DICT = {
     "venusaur": 3,
     "sirfetchd": 4,
     "tauros": 5,
-    "eevee": 0,
-    "vaporeon": 1,
-    "sylveon": 2,
-    "jolteon": 3,
-    "leafeon": 4,
-    "umbreon": 5
 }
