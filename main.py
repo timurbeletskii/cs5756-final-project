@@ -141,7 +141,7 @@ def train_reinforce(num_outer_loop: int, num_episodes: int,
 def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
                  gamma: float, lr: float, 
                  reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict, log_num: int):
-    opponent = MaxDamagePlayer(
+    opponent = SimpleHeuristicsPlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
         server_configuration=LocalhostServerConfiguration,
@@ -296,9 +296,9 @@ if __name__ == "__main__":
     parser.add_argument('--n_steps', type=int, nargs='?',
                         default=64, help="Number of steps to rollout per update (stablebaseline)")
     parser.add_argument('--gamma', type=float, nargs='?',
-                        default=0.99, help="Gamma")
+                        default=0.75, help="Gamma")
     parser.add_argument('--lr', type=float, nargs='?',
-                        default=0.01, help="Learning rate")
+                        default=0.00025, help="Learning rate")
     parser.add_argument('--plot_steps', type=int, nargs='?',
                         default=5, help="Number of episodes to rollout at each loop")
     parser.add_argument('--reward_type', type=str, nargs='?',
