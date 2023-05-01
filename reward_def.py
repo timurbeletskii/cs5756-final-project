@@ -51,13 +51,13 @@ def reward_computing_helper_custom(
 
     if battle.opponent_active_pokemon is not None:
         active = battle.opponent_active_pokemon
-        current_value -= active.current_hp_fraction * hp_value * opponent_value # Reset hp contribution of active pokemon to 0
-        current_value += (active.current_hp_fraction - hp_shift) * hp_value * opponent_value * (1 + active_weight)
+        current_value += active.current_hp_fraction * hp_value * opponent_value # Reset hp contribution of active pokemon to 0
+        current_value -= (active.current_hp_fraction - hp_shift) * hp_value * opponent_value * (1 + active_weight)
         # Add shifted hp reward value for active pokemon
         if active.fainted:
-            current_value -= fainted_value * active_weight * opponent_value
+            current_value += fainted_value * active_weight * opponent_value
         elif active.status is not None:
-            current_value -= status_value * active_weight * opponent_value
+            current_value += status_value * active_weight * opponent_value
 
     # Verify if we won or lost
     if battle.won:
