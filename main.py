@@ -270,9 +270,9 @@ def train_a2c(total_timesteps: int, num_episodes: int,
         status_value=reward_def_dict["status_value"],
     )
 
-    dqn = A2C("MlpPolicy", rl_agent_env, verbose=1, 
+    a2c = A2C("MlpPolicy", rl_agent_env, verbose=1, 
               tensorboard_log="tensorboard_logs/a2c/")
-    model = A2C_Stablebaseline(dqn)
+    model = A2C_Stablebaseline(a2c)
     model.train(total_timesteps=total_timesteps)
     rl_agent_env.close()
     model.save_model(model_path)
