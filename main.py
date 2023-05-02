@@ -39,10 +39,7 @@ class RL_Agent(Gen8EnvSinglePlayer):
 
     def calc_reward(self, last_battle, current_battle) -> float:
         if self.reward_type == "default":
-            return self.reward_computing_helper(
-                current_battle, fainted_value=self.fainted_value, 
-                hp_value=self.hp_value, victory_value=self.victory_value, status_value=self.status_value 
-            )
+            return self.reward_computing_helper(current_battle, fainted_value=2.0, hp_value=1.0, victory_value=30.0)
         elif self.reward_type == "custom":
             return reward_computing_helper_custom(
                 self, current_battle, fainted_value = self.fainted_value, hp_value=self.hp_value,
@@ -183,7 +180,7 @@ def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
 
 
 def train_dqn(total_timesteps: int, num_episodes: int, 
-                 gamma: float, lr: float,
+                 gamma: float, lr: float, learning_starts: int,
                  reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict, log_num: int):
     opponent = MaxDamagePlayer(
         battle_format="gen8ou",
@@ -200,8 +197,7 @@ def train_dqn(total_timesteps: int, num_episodes: int,
         use_old_gym_api=True,
     )
     # check_env(rl_agent_env)
-
-    dqn = DQN("MlpPolicy", rl_agent_env, gamma=gamma, learning_rate=lr, verbose=1, 
+    dqn = DQN("MlpPolicy", rl_agent_env, gamma=gamma, learning_rate=lr, learning_starts=learning_starts, verbose=1, 
               tensorboard_log="tensorboard_logs/dqn/")
     model = DQN_Stablebaseline(dqn)
     model.train(total_timesteps=total_timesteps)
@@ -293,6 +289,8 @@ if __name__ == "__main__":
                         default=10, help="Number of episodes to rollout at each loop")
     parser.add_argument('--total_timesteps', type=int, nargs='?',
                         default=10000, help="Number of timesteps (stablebaseline)")
+    parser.add_argument('--learning_starts', type=int, nargs='?',
+                        default=1000, help="Learning starts for DQN (stablebaseline)")
     parser.add_argument('--n_steps', type=int, nargs='?',
                         default=64, help="Number of steps to rollout per update (stablebaseline)")
     parser.add_argument('--gamma', type=float, nargs='?',
@@ -350,7 +348,7 @@ if __name__ == "__main__":
                     args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict, args.log_num)
             case "dqn":
                 train_dqn(args.total_timesteps, args.num_episodes, 
-                        args.gamma, args.lr, 
+                        args.gamma, args.lr, args.learning_starts,
                         args.reward_type, args.num_eval_episodes, args.model_path, reward_def_dict, args.log_num)
             case "a2c":
                 train_a2c(args.total_timesteps, args.num_episodes, 
