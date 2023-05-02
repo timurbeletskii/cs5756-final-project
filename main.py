@@ -182,7 +182,7 @@ def train_ppo(total_timestep: int, n_steps: int, n_epochs: int,
 def train_dqn(total_timesteps: int, num_episodes: int, 
                  gamma: float, lr: float, learning_starts: int,
                  reward_type: str, num_eval_episodes: int, model_path: str, reward_def_dict: dict, log_num: int):
-    opponent = MaxDamagePlayer(
+    opponent = SimpleHeuristicsPlayer(
         battle_format="gen8ou",
         team=teams.OP_TEAM,
         server_configuration=LocalhostServerConfiguration,
@@ -195,6 +195,13 @@ def train_dqn(total_timesteps: int, num_episodes: int,
         start_challenging=True,
         opponent=opponent,
         use_old_gym_api=True,
+        fainted_value=reward_def_dict["fainted_value"],
+        hp_value=reward_def_dict["hp_value"],
+        victory_value=reward_def_dict["victory_value"],
+        active_weight=reward_def_dict["active_weight"],
+        opponent_weight=reward_def_dict["opponent_weight"],
+        hp_shift=reward_def_dict["hp_shift"],
+        status_value=reward_def_dict["status_value"],
     )
     # check_env(rl_agent_env)
     dqn = DQN("MlpPolicy", rl_agent_env, gamma=gamma, learning_rate=lr, learning_starts=learning_starts, verbose=1, 
